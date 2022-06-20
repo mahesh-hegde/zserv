@@ -74,7 +74,3 @@ func main() {
 	fmt.Scanln()
 }
 
-// TODO:
-//	- verbose output on client connection
-//  - limit IP addresses
-//  - run in background
