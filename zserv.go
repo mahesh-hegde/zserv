@@ -117,6 +117,8 @@ func main() {
 	verbose("starting server")
 	verbose("host: %s, port %d", options.Host, options.Port)
 	fmt.Printf("ZServ running on port %d\n", options.Port)
-	go log.Fatal(http.ListenAndServe(hostAddr, nil))
+	go func() {
+		log.Fatal(http.ListenAndServe(hostAddr, nil))
+	}()
 	fmt.Scanln()
 }
