@@ -14,9 +14,8 @@ import (
 
 func checkError(err error, message string) {
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, message)
-		os.Exit(2)
+		log.Println(err)
+		log.Fatal(message)
 	}
 }
 
@@ -31,7 +30,7 @@ var options Options
 
 func verbose(format string, values ...any) {
 	if options.Verbose {
-		fmt.Fprintf(os.Stderr, format+"\n", values...)
+		log.Printf(format+"\n", values...)
 	}
 }
 
@@ -116,7 +115,7 @@ func main() {
 	})
 	verbose("starting server")
 	verbose("host: %s, port %d", options.Host, options.Port)
-	fmt.Printf("ZServ running on port %d\n", options.Port)
+	log.Printf("ZServ running on port %d\n", options.Port)
 	go func() {
 		log.Fatal(http.ListenAndServe(hostAddr, nil))
 	}()
