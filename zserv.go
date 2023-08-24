@@ -12,10 +12,10 @@ import (
 	"os"
 )
 
-func checkError(err error, message string) {
+func checkError(err error, format string, args ...any) {
 	if err != nil {
 		log.Println(err)
-		log.Fatal(message)
+		log.Fatalf(format, args...)
 	}
 }
 
@@ -34,7 +34,7 @@ func verbose(format string, values ...any) {
 	}
 }
 
-type ZipReader struct {
+type ZipReaderFS struct {
 	*zip.Reader
 }
 
@@ -66,7 +66,9 @@ func NewBufferedZipEntry(f fs.File) *BufferedZipEntry {
 var _ io.ReadSeeker = &BufferedZipEntry{}
 var _ fs.File = &BufferedZipEntry{}
 
-func (z ZipReader) Open(name string) (fs.File, error) {
+var _ fs.FS = &ZipReaderFS{}
+
+func (z ZipReaderFS) Open(name string) (fs.File, error) {
 	verbose("open: %s", name)
 	f, err := z.Reader.Open(name)
 	if err != nil {
@@ -74,6 +76,37 @@ func (z ZipReader) Open(name string) (fs.File, error) {
 		return nil, err
 	}
 	return NewBufferedZipEntry(f), nil
+}
+
+func OpenZipReaderFS(path string) fs.FS {
+	f, err := os.Open(path)
+	checkError(err, "cannot open input file")
+	fstat, err := f.Stat()
+	checkError(err, "Cannot stat input file")
+	return GetZipReaderFS(f, fstat.Size())
+}
+
+func GetZipReaderFS(reader io.ReaderAt, size int64) ZipReaderFS {
+	zipReader, err := zip.NewReader(reader, size)
+	checkError(err, "cannot open input ZIP file")
+	return ZipReaderFS{zipReader}
+}
+
+// StartServer spawns the server in a separate goroutine and returns.
+func StartServer(options *Options, zipFS fs.FS) {
+	mux := http.NewServeMux()
+
+	hostAddr := fmt.Sprintf("%s:%d", options.Host, options.Port)
+	fileserver := http.FileServer(http.FS(zipFS))
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		verbose("\nclient: %v", req.RemoteAddr)
+		verbose("request: %v", req.RequestURI)
+		fileserver.ServeHTTP(w, req)
+	})
+	go func() {
+		log.Fatal(http.ListenAndServe(hostAddr, mux))
+	}()
+
 }
 
 func main() {
@@ -91,33 +124,17 @@ func main() {
 	}
 
 	path := args[0]
-	f, _ := os.Open(path)
-	fstat, _ := f.Stat()
-	z_, err := zip.NewReader(f, fstat.Size())
-	checkError(err, "cannot open zip file.")
-	z := ZipReader{z_}
+	reader := OpenZipReaderFS(path)
 
-	var webfs fs.FS = z
+	var webfs fs.FS = reader
 
 	if options.Root != "." {
 		verbose("opening sub-filesystem at %s", options.Root)
 		var err error
-		webfs, err = fs.Sub(z, options.Root)
+		webfs, err = fs.Sub(reader, options.Root)
 		checkError(err, "cannot open webserver root!")
 	}
-
-	hostAddr := fmt.Sprintf("%s:%d", options.Host, options.Port)
-	fileserver := http.FileServer(http.FS(webfs))
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		verbose("\nclient: %v", req.RemoteAddr)
-		verbose("request: %v", req.RequestURI)
-		fileserver.ServeHTTP(w, req)
-	})
-	verbose("starting server")
-	verbose("host: %s, port %d", options.Host, options.Port)
-	log.Printf("ZServ running on port %d\n", options.Port)
-	go func() {
-		log.Fatal(http.ListenAndServe(hostAddr, nil))
-	}()
+	StartServer(&options, webfs)
+	log.Printf("zserv bound to %s:%d\n", options.Host, options.Port)
 	fmt.Scanln()
 }
