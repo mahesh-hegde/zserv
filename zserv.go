@@ -1,5 +1,12 @@
 package main
 
+// TODO:
+// * Per-file memory limit
+// * Unit tests
+// * Zip internal paths
+// * Buffer entry cache / allocator
+// * Config file
+
 import (
 	"archive/zip"
 	"bytes"
