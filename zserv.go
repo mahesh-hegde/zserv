@@ -3,13 +3,14 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+
+	flag "github.com/spf13/pflag"
 )
 
 func checkError(err error, format string, args ...any) {
@@ -110,10 +111,10 @@ func StartServer(options *Options, zipFS fs.FS) {
 }
 
 func main() {
-	flag.IntVar(&options.Port, "port", 8080, "Port to listen on")
-	flag.BoolVar(&options.Verbose, "verbose", false, "Verbose output")
-	flag.StringVar(&options.Root, "root", ".", "Root of the website served relative to ZIP file")
-	flag.StringVar(&options.Host, "host", "127.0.0.1", "Host adress to bind to")
+	flag.IntVarP(&options.Port, "port", "p", 8080, "Port to listen on")
+	flag.BoolVarP(&options.Verbose, "verbose", "v", false, "Verbose output")
+	flag.StringVarP(&options.Root, "root", "r", ".", "Root of the website served relative to ZIP file")
+	flag.StringVarP(&options.Host, "host", "h", "127.0.0.1", "Host adress to bind to")
 
 	flag.Parse()
 
