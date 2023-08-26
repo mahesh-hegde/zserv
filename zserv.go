@@ -1,9 +1,7 @@
 package main
 
 // TODO:
-// * Per-file memory limit
-// * Unit tests
-// * Zip internal paths
+// * Zip internal paths - if same file is used to serve multiple paths
 // * Buffer entry cache / allocator
 // * Config file
 
@@ -70,7 +68,6 @@ func main() {
 
 	maxBufferSize, err := parseLimit(maxBufferSizeStr)
 	checkError(err, "cannot parse parameter for max buffer size")
-	log.Println(maxBufferSize)
 	options.MaxBufferSize = maxBufferSize
 
 	path := args[0]
@@ -85,7 +82,6 @@ func main() {
 		checkError(err, "cannot open webserver root!")
 	}
 
-	go StartServer(&options, webfs)
-	log.Printf("zserv bound to %s:%d\n", options.Host, options.Port)
-	fmt.Scanln()
+	log.Printf("zserv binding to %s:%d\n", options.Host, options.Port)
+	StartServer(&options, webfs)
 }
