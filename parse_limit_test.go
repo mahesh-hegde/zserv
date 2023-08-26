@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseLimit(t *testing.T) {
@@ -16,15 +18,11 @@ func TestParseLimit(t *testing.T) {
 		"1G":    1024 * 1024 * 1024,
 		"23G":   1024 * 1024 * 1024 * 23,
 	}
+	assert := assert.New(t)
 	for in, out := range happyCases {
 		got, err := parseLimit(in)
-		if err != nil {
-			t.Errorf("parseLimit(%s): Expected %d but got error %s",
-				in, out, err.Error())
-		}
-		if got != out {
-			t.Errorf("parseLimit(%s): Expected %d but got %d", in, out, got)
-		}
+		assert.Nil(err)
+		assert.Equal(out, got, "parseLimit("+in+")")
 	}
 }
 
