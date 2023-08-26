@@ -11,6 +11,8 @@ import (
 
 var limitRegex = regexp.MustCompile("([0-9]+)[KMG]")
 
+var errLimitFormat = fmt.Errorf("limit string is in invalid format")
+
 var multipliers = map[rune]int64{
 	'K': 1024,
 	'M': 1024 * 1024,
@@ -27,5 +29,5 @@ func parseLimit(limit string) (bytes int64, err error) {
 		fmt.Sscanf(limit, "%d%c", &bytes, &mult)
 		return bytes * multipliers[mult], nil
 	}
-	return 0, fmt.Errorf("limit string is in invalid format")
+	return 0, errLimitFormat
 }
