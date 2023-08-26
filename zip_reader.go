@@ -64,15 +64,18 @@ func (z ZipReaderFS) Open(name string) (fs.File, error) {
 
 var _ fs.FS = &ZipReaderFS{}
 
-func OpenZipReaderFS(path string, maxBufferSize int64) fs.FS {
+func OpenZipReaderFS(path string, options *Options) fs.FS {
 	f, err := os.Open(path)
 	checkError(err, "cannot open input file")
 	fstat, err := f.Stat()
 	checkError(err, "Cannot stat input file")
-	return GetZipReaderFS(f, fstat.Size(), maxBufferSize)
+	if options.NoBuffer {
+		return GetStreamingZipFs(f, fstat.Size())
+	}
+	return GetBufferingZipFS(f, fstat.Size(), options.MaxBufferSize)
 }
 
-func GetZipReaderFS(reader io.ReaderAt, size int64,
+func GetBufferingZipFS(reader io.ReaderAt, size int64,
 	maxBufferSize int64) ZipReaderFS {
 	zipReader, err := zip.NewReader(reader, size)
 	checkError(err, "cannot open input ZIP file")

@@ -1,8 +1,10 @@
 package main
 
 // TODO:
-// * Zip internal paths - if same file is used to serve multiple paths
+// * Benchmark memory usage when downloading a large file
+// --
 // * Buffer entry cache / allocator
+// * Zip internal paths - if same server is used to serve multiple paths
 // * Config file
 
 import (
@@ -25,6 +27,7 @@ func checkError(err error, format string, args ...any) {
 type Options struct {
 	Port          int
 	MaxBufferSize int64
+	NoBuffer      bool
 	Verbose       bool
 	Root          string
 	Host          string
@@ -55,6 +58,8 @@ func main() {
 	var maxBufferSizeStr string
 	flag.IntVarP(&options.Port, "port", "p", 8088, "Port to listen on")
 	flag.BoolVarP(&options.Verbose, "verbose", "v", false, "Verbose output")
+	flag.BoolVarP(&options.NoBuffer, "no-buffer", "B", false, "Do not load the files completely into memory. "+
+		"(relies implementation details of net/http)")
 	flag.StringVarP(&options.Root, "root", "r", ".", "Root of the website served relative to ZIP file")
 	flag.StringVarP(&options.Host, "host", "h", "127.0.0.1", "Host adress to bind to")
 	flag.StringVarP(&maxBufferSizeStr, "max-buffer-size", "Z", "256M", "Maximum file size allowed")
@@ -71,7 +76,7 @@ func main() {
 	options.MaxBufferSize = maxBufferSize
 
 	path := args[0]
-	reader := OpenZipReaderFS(path, options.MaxBufferSize)
+	reader := OpenZipReaderFS(path, &options)
 
 	var webfs fs.FS = reader
 
@@ -82,6 +87,6 @@ func main() {
 		checkError(err, "cannot open webserver root!")
 	}
 
-	log.Printf("zserv binding to %s:%d\n", options.Host, options.Port)
+	log.Printf("zserv binding to http://%s:%d\n", options.Host, options.Port)
 	StartServer(&options, webfs)
 }

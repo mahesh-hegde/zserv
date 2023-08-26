@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -30,10 +31,13 @@ func createZipFile(entries []entry) *bytes.Buffer {
 	return &buffer
 }
 
-func createTestZipReaderFS(entries []entry) fs.FS {
+func createBothTestZipReaderFS(entries []entry) []fs.FS {
 	zip := createZipFile(entries)
-	return GetZipReaderFS(bytes.NewReader(zip.Bytes()),
-		int64(zip.Len()), largeBufferSize)
+	return []fs.FS{
+		GetBufferingZipFS(bytes.NewReader(zip.Bytes()),
+			int64(zip.Len()), largeBufferSize),
+		GetStreamingZipFs(bytes.NewReader(zip.Bytes()), int64(zip.Len())),
+	}
 }
 
 const largeBufferSize = 256 * 1024 * 1024 * 1024
@@ -46,15 +50,16 @@ func TestReadZipEntries(t *testing.T) {
 		{"Boom/Boom", "Boom/Boom"},
 		{"Repeated", strings.Repeat("yep9a8hlnk", 1000)},
 	}
-	zip := createZipFile(entries)
-	fs := GetZipReaderFS(bytes.NewReader(zip.Bytes()),
-		int64(zip.Len()), largeBufferSize)
-	for _, e := range entries {
-		f, err := fs.Open(e.Name)
-		assert.Nil(t, err)
-		read, err := io.ReadAll(f)
-		assert.Nil(t, err)
-		assert.Equal(t, e.Body, string(read))
+	for _, fs := range createBothTestZipReaderFS(entries) {
+		t.Run(reflect.TypeOf(fs).Name(), func(t *testing.T) {
+			for _, e := range entries {
+				f, err := fs.Open(e.Name)
+				assert.Nil(t, err)
+				read, err := io.ReadAll(f)
+				assert.Nil(t, err)
+				assert.Equal(t, e.Body, string(read))
+			}
+		})
 	}
 }
 
@@ -67,22 +72,24 @@ func TestHttpContentTypeWorks(t *testing.T) {
 		{"long_html.pdf", fmt.Sprintf("<html><body>%s</body></html>\n", repeatedP)},
 		{"binary", strings.Repeat("\u0001\u0002\u0003", 1000)},
 	}
-	zip := createZipFile(entries)
-	fs := GetZipReaderFS(bytes.NewReader(zip.Bytes()),
-		int64(zip.Len()), largeBufferSize)
+	fses := createBothTestZipReaderFS(entries)
 	expect := map[string]string{
 		"Hello":         "text/plain",
 		"html.txt":      "text/html",
 		"long_html.pdf": "text/html",
 		"binary":        "application/octet-stream",
 	}
-	for name, ctype := range expect {
-		f, err := fs.Open(name)
-		assert.Nil(t, err)
-		bytes, err := io.ReadAll(f)
-		assert.Nil(t, err)
-		assert.Contains(t, http.DetectContentType(bytes), ctype,
-			"Detect content type for "+name)
+	for _, fs := range fses {
+		t.Run(reflect.TypeOf(fs).Name(), func(t *testing.T) {
+			for name, ctype := range expect {
+				f, err := fs.Open(name)
+				assert.Nil(t, err)
+				bytes, err := io.ReadAll(f)
+				assert.Nil(t, err)
+				assert.Contains(t, http.DetectContentType(bytes), ctype,
+					"Detect content type for "+name)
+			}
+		})
 	}
 }
 
@@ -93,12 +100,14 @@ func TestLargeHtmlFile(t *testing.T) {
 	entries := []entry{
 		{"large.html", fmt.Sprintf("<html><body>%s</body></html>\n", repeatedP)},
 	}
-	zip := createZipFile(entries)
-	fs := GetZipReaderFS(bytes.NewReader(zip.Bytes()),
-		int64(zip.Len()), largeBufferSize)
-	f, err := fs.Open("large.html")
-	assert.Nil(t, err)
-	bytes, err := io.ReadAll(f)
-	assert.Nil(t, err)
-	assert.Contains(t, http.DetectContentType(bytes), "text/html")
+	fses := createBothTestZipReaderFS(entries)
+	for _, fs := range fses {
+		t.Run(reflect.TypeOf(fs).Name(), func(t *testing.T) {
+			f, err := fs.Open("large.html")
+			assert.Nil(t, err)
+			bytes, err := io.ReadAll(f)
+			assert.Nil(t, err)
+			assert.Contains(t, http.DetectContentType(bytes), "text/html")
+		})
+	}
 }

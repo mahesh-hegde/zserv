@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -34,10 +35,15 @@ func TestBasicDownload(t *testing.T) {
 		{"nest/ed.html", "<html><body>Hello</body></html>"},
 		{"nest/ed/nest/ed.html", "alwiehgweioghlafknewi;foghiEGNLAERI"},
 	}
-	fs := createTestZipReaderFS(entries)
-	go StartServer(&Options{Port: port, Host: "127.0.0.1", Root: "."}, fs)
-	for _, entry := range entries {
-		bytes := downloadFile(port, entry.Name)
-		assert.Equal(t, entry.Body, string(bytes), "Download %s", entry.Name)
+	for index, fs := range createBothTestZipReaderFS(entries) {
+		t.Run(reflect.TypeOf(fs).Name(), func(t *testing.T) {
+			go StartServer(&Options{Port: port + index, Host: "127.0.0.1",
+				Root: "."}, fs)
+			for _, entry := range entries {
+				bytes := downloadFile(port, entry.Name)
+				assert.Equal(t, entry.Body, string(bytes), "Download %s",
+					entry.Name)
+			}
+		})
 	}
 }
