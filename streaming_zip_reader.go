@@ -65,6 +65,11 @@ type StreamingZipFS struct {
 	*zip.Reader
 }
 
+// Name returns the name of this implementation. This exists for test purpose.
+func (zipFS *StreamingZipFS) Name() string {
+	return "StreamingZipFS"
+}
+
 func GetStreamingZipFs(reader io.ReaderAt, size int64) *StreamingZipFS {
 	zipReader, err := zip.NewReader(reader, size)
 	checkError(err, "cannot create ZIP reader")
@@ -88,4 +93,4 @@ func (zipFS *StreamingZipFS) Open(name string) (fs.File, error) {
 	return NewBufferedZipEntry(f), nil
 }
 
-var _ fs.FS = &ZipReaderFS{}
+var _ fs.FS = &BufferingZipFS{}

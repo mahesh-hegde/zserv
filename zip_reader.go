@@ -39,12 +39,17 @@ var _ fs.File = &BufferedZipEntry{}
 
 var errBufferSizeExceeded = fmt.Errorf("size exceeds maximum allowed buffer size")
 
-type ZipReaderFS struct {
+type BufferingZipFS struct {
 	*zip.Reader
 	maxBufferSize int64
 }
 
-func (z ZipReaderFS) Open(name string) (fs.File, error) {
+// Name() returns the name of this implementation. This exists for test purpose.
+func (z BufferingZipFS) Name() string {
+	return "BufferingZipFS"
+}
+
+func (z BufferingZipFS) Open(name string) (fs.File, error) {
 	verbose("open: %s", name)
 	f, err := z.Reader.Open(name)
 	if err != nil || f == nil {
@@ -62,7 +67,7 @@ func (z ZipReaderFS) Open(name string) (fs.File, error) {
 	return NewBufferedZipEntry(f), nil
 }
 
-var _ fs.FS = &ZipReaderFS{}
+var _ fs.FS = &BufferingZipFS{}
 
 func OpenZipReaderFS(path string, options *Options) fs.FS {
 	f, err := os.Open(path)
@@ -76,8 +81,8 @@ func OpenZipReaderFS(path string, options *Options) fs.FS {
 }
 
 func GetBufferingZipFS(reader io.ReaderAt, size int64,
-	maxBufferSize int64) ZipReaderFS {
+	maxBufferSize int64) BufferingZipFS {
 	zipReader, err := zip.NewReader(reader, size)
 	checkError(err, "cannot open input ZIP file")
-	return ZipReaderFS{zipReader, maxBufferSize}
+	return BufferingZipFS{zipReader, maxBufferSize}
 }

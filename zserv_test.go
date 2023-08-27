@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -36,7 +35,7 @@ func TestBasicDownload(t *testing.T) {
 		{"nest/ed/nest/ed.html", "alwiehgweioghlafknewi;foghiEGNLAERI"},
 	}
 	for index, fs := range createBothTestZipReaderFS(entries) {
-		t.Run(reflect.TypeOf(fs).Name(), func(t *testing.T) {
+		t.Run(fs.Name(), func(t *testing.T) {
 			go StartServer(&Options{Port: port + index, Host: "127.0.0.1",
 				Root: "."}, fs)
 			for _, entry := range entries {
