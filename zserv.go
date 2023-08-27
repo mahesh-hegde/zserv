@@ -1,7 +1,9 @@
 package main
 
 // TODO:
+// * Auto detect website root
 // * Benchmark memory usage when downloading a large file
+// * Search endpoint
 // --
 // * Buffer entry cache / allocator
 // * Zip internal paths - if same server is used to serve multiple paths
@@ -30,6 +32,7 @@ type Options struct {
 	NoBuffer      bool
 	Verbose       bool
 	Root          string
+	DetectRoot    bool
 	Host          string
 }
 
@@ -61,6 +64,8 @@ func main() {
 	flag.BoolVarP(&options.NoBuffer, "no-buffer", "B", false, "Do not load the files completely into memory. "+
 		"(relies implementation details of net/http)")
 	flag.StringVarP(&options.Root, "root", "r", ".", "Root of the website served relative to ZIP file")
+	flag.BoolVarP(&options.DetectRoot, "detect-root", "R", false,
+		"Auto detect root folder as first folder containing multiple entries or an index.html")
 	flag.StringVarP(&options.Host, "host", "h", "127.0.0.1", "Host adress to bind to")
 	flag.StringVarP(&maxBufferSizeStr, "max-buffer-size", "Z", "256M", "Maximum file size allowed")
 	flag.Parse()
@@ -76,15 +81,31 @@ func main() {
 	options.MaxBufferSize = maxBufferSize
 
 	path := args[0]
-	reader := OpenZipReaderFS(path, &options)
+	webfs := OpenZipReaderFS(path, &options)
 
-	var webfs fs.FS = reader
+	if options.DetectRoot && options.Root != "." {
+		log.Fatalf("Conflicting options: set root and detect root")
+	}
 
 	if options.Root != "." {
 		verbose("opening sub-filesystem at %s", options.Root)
 		var err error
-		webfs, err = fs.Sub(reader, options.Root)
+		webfs, err = fs.Sub(webfs, options.Root)
 		checkError(err, "cannot open webserver root!")
+	}
+
+	if options.DetectRoot {
+		sub, err := detectRoot(webfs)
+		if err != nil {
+			log.Printf("auto-detection of website root failed: %s", err)
+		} else {
+			webfs = sub
+		}
+	}
+
+	if options.DetectRoot {
+
+		verbose("Detect root as: %s")
 	}
 
 	log.Printf("zserv binding to http://%s:%d\n", options.Host, options.Port)
