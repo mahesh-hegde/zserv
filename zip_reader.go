@@ -74,10 +74,10 @@ func OpenZipReaderFS(path string, options *Options) fs.FS {
 	checkError(err, "cannot open input file")
 	fstat, err := f.Stat()
 	checkError(err, "Cannot stat input file")
-	if options.NoBuffer {
-		return GetStreamingZipFs(f, fstat.Size())
+	if options.BufferFiles {
+		return GetBufferingZipFS(f, fstat.Size(), options.MaxBufferSize)
 	}
-	return GetBufferingZipFS(f, fstat.Size(), options.MaxBufferSize)
+	return GetStreamingZipFs(f, fstat.Size())
 }
 
 func GetBufferingZipFS(reader io.ReaderAt, size int64,

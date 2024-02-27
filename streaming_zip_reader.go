@@ -90,7 +90,7 @@ func (zipFS *StreamingZipFS) Open(name string) (fs.File, error) {
 	if stat.IsDir() {
 		return f, nil
 	}
-	return NewBufferedZipEntry(f), nil
+	return NewStreamingZipEntryReader(f), nil
 }
 
 var _ fs.FS = &BufferingZipFS{}

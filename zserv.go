@@ -29,7 +29,7 @@ func checkError(err error, format string, args ...any) {
 type Options struct {
 	Port          int
 	MaxBufferSize int64
-	NoBuffer      bool
+	BufferFiles   bool
 	Verbose       bool
 	Root          string
 	DetectRoot    bool
@@ -50,8 +50,12 @@ func StartServer(options *Options, zipFS fs.FS) {
 	hostAddr := fmt.Sprintf("%s:%d", options.Host, options.Port)
 	fileserver := http.FileServer(http.FS(zipFS))
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		verbose("\nclient: %v", req.RemoteAddr)
-		verbose("request: %v", req.RequestURI)
+		defer func() {
+			err := recover()
+			if err != nil {
+				log.Printf("%v [%s] %v: %v\n", req.RemoteAddr, req.Method, req.RequestURI, err)
+			}
+		}()
 		fileserver.ServeHTTP(w, req)
 	})
 	log.Fatal(http.ListenAndServe(hostAddr, mux))
@@ -61,8 +65,7 @@ func main() {
 	var maxBufferSizeStr string
 	flag.IntVarP(&options.Port, "port", "p", 8088, "Port to listen on")
 	flag.BoolVarP(&options.Verbose, "verbose", "v", false, "Verbose output")
-	flag.BoolVarP(&options.NoBuffer, "no-buffer", "B", false, "Do not load the files completely into memory. "+
-		"(relies implementation details of net/http)")
+	flag.BoolVarP(&options.BufferFiles, "buffer", "b", false, "Load files completely into memory before serving them")
 	flag.StringVarP(&options.Root, "root", "r", ".", "Root of the website served relative to ZIP file")
 	flag.BoolVarP(&options.DetectRoot, "detect-root", "R", false,
 		"Auto detect root folder as first folder containing multiple entries or an index.html")
