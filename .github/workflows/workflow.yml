@@ -30,6 +30,7 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
           IMAGE_NAME: ghcr.io/mahesh-hegde/zserv
         steps:
+          - uses: actions/checkout@v4
           - name: Docker login
             run:  echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
           - name: Docker build
