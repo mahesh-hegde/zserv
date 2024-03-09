@@ -1,0 +1,23 @@
+name: default-pipeline
+on: [push]
+jobs:
+    check-format:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-go@v5
+              with:
+                go-version: '^1.21.2'
+            - name: Install gofumpt
+              run: go install mvdan.cc/gofumpt@latest
+            - name: Check formatting
+              run: gofumpt -w -l . && git diff --exit-code
+    unit-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-go@v5
+              with:
+                go-version: '^1.21.2'
+            - name: Run tests
+              run: go test
