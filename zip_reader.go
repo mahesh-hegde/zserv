@@ -34,8 +34,10 @@ func NewBufferedZipEntry(f fs.File) *BufferedZipEntry {
 	return &BufferedZipEntry{f, bytes.NewReader(buf.Bytes())}
 }
 
-var _ io.ReadSeeker = &BufferedZipEntry{}
-var _ fs.File = &BufferedZipEntry{}
+var (
+	_ io.ReadSeeker = &BufferedZipEntry{}
+	_ fs.File       = &BufferedZipEntry{}
+)
 
 var errBufferSizeExceeded = fmt.Errorf("size exceeds maximum allowed buffer size")
 
@@ -81,7 +83,8 @@ func OpenZipReaderFS(path string, options *Options) fs.FS {
 }
 
 func GetBufferingZipFS(reader io.ReaderAt, size int64,
-	maxBufferSize int64) BufferingZipFS {
+	maxBufferSize int64,
+) BufferingZipFS {
 	zipReader, err := zip.NewReader(reader, size)
 	checkError(err, "cannot open input ZIP file")
 	return BufferingZipFS{zipReader, maxBufferSize}

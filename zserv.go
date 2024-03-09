@@ -107,7 +107,6 @@ func main() {
 	}
 
 	if options.DetectRoot {
-
 		verbose("Detect root as: %s")
 	}
 
