@@ -111,5 +111,5 @@ func main() {
 	}
 
 	log.Printf("zserv binding to http://%s:%d\n", options.Host, options.Port)
-	StartServer(&options, webfs)
+	StartServer(&options, webfs) 
 }
