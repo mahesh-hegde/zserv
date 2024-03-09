@@ -36,8 +36,10 @@ func TestBasicDownload(t *testing.T) {
 	}
 	for index, fs := range createBothTestZipReaderFS(entries) {
 		t.Run(fs.Name(), func(t *testing.T) {
-			go StartServer(&Options{Port: port + index, Host: "127.0.0.1",
-				Root: "."}, fs)
+			go StartServer(&Options{
+				Port: port + index, Host: "127.0.0.1",
+				Root: ".",
+			}, fs)
 			for _, entry := range entries {
 				bytes := downloadFile(port+index, entry.Name)
 				assert.Equal(t, entry.Body, string(bytes), "Download %s",

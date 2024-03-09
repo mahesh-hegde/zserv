@@ -44,8 +44,10 @@ func (s *StreamingZipEntryReader) Seek(offset int64, whence int) (int64, error) 
 	return -1, fmt.Errorf("unsupported seek parameters")
 }
 
-var _ io.ReadSeekCloser = &StreamingZipEntryReader{}
-var _ fs.File = &StreamingZipEntryReader{}
+var (
+	_ io.ReadSeekCloser = &StreamingZipEntryReader{}
+	_ fs.File           = &StreamingZipEntryReader{}
+)
 
 // NewStreamingZipEntryReader returns a lazy reader with limited seek.
 // `file` must not be a directory.
